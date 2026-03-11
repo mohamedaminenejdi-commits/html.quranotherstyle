@@ -1,0 +1,2 @@
+# html.quranotherstyle
+quran elkarim
