@@ -5,25 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>نور القرآن الكريم</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Amiri+Quran&display=swap" rel="stylesheet">
+
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css"
     rel="stylesheet"
   />
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg premium-nav sticky-top">
+  <div class="page-bg"></div>
+
+  <nav class="navbar navbar-expand-lg quran-navbar sticky-top">
     <div class="container">
-      <a class="navbar-brand d-flex align-items-center gap-3" href="#">
+      <a class="navbar-brand brand-wrap" href="#">
         <div class="brand-icon">☪</div>
         <div>
           <div class="brand-title">نور القرآن الكريم</div>
-          <div class="brand-subtitle">قراءة راقية ومحترمة لكلام الله</div>
+          <div class="brand-subtitle">قراءة واستماع فاخر ومحترم لكلام الله</div>
         </div>
       </a>
 
-      <div class="ms-auto d-flex gap-2 flex-wrap">
-        <button id="themeBtn" class="btn btn-gold">تبديل المظهر</button>
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <button id="themeBtn" class="btn btn-theme" type="button">تبديل المظهر</button>
       </div>
     </div>
   </nav>
@@ -33,26 +40,32 @@
       <div class="hero-card">
         <div class="row g-4 align-items-center">
           <div class="col-lg-8">
-            <span class="hero-badge">واجهة فاخرة للقرآن الكريم</span>
-            <h1 class="hero-title">اقرأ القرآن الكريم بتصميم أنيق ومريح</h1>
+            <span class="hero-badge">تصميم فاخر للقرآن الكريم</span>
+            <h1 class="hero-title">اقرأ واستمع إلى القرآن الكريم بتصميم أنيق ومريح</h1>
             <p class="hero-text">
-              ابحث عن السورة باسمها مثل: الفاتحة، أو اكتب:
-              سورة الفاتحة / sorat al-fatihah / asoorat الفاتحة
+              ابحث عن السورة مثل:
+              <strong>الفاتحة</strong>
+              أو اكتب:
+              <strong>سورة الفاتحة</strong>
+              أو
+              <strong>asoorat الفاتحة</strong>.
+              ويمكنك أيضًا الاستماع بصوت قارئ مشهور.
             </p>
           </div>
+
           <div class="col-lg-4">
-            <div class="stats-box">
-              <div class="stat-item">
-                <strong>114</strong>
-                <span>سورة</span>
+            <div class="stats-grid">
+              <div class="stat-box">
+                <span class="stat-number">114</span>
+                <span class="stat-label">سورة</span>
               </div>
-              <div class="stat-item">
-                <strong>30</strong>
-                <span>جزء</span>
+              <div class="stat-box">
+                <span class="stat-number">30</span>
+                <span class="stat-label">جزء</span>
               </div>
-              <div class="stat-item">
-                <strong>60</strong>
-                <span>حزب</span>
+              <div class="stat-box">
+                <span class="stat-number">60</span>
+                <span class="stat-label">حزب</span>
               </div>
             </div>
           </div>
@@ -61,14 +74,14 @@
     </div>
   </header>
 
-  <main class="container main-section">
+  <main class="container pb-5">
     <div class="row g-4">
-      <div class="col-lg-4">
-        <div class="panel-box p-3 p-md-4 mb-4">
+      <div class="col-xl-4 col-lg-5">
+        <div class="panel-card mb-4">
           <h3 class="panel-title">البحث والانتقال</h3>
 
           <div class="mb-3">
-            <label class="form-label premium-label">ابحث عن سورة</label>
+            <label class="form-label form-label-premium">ابحث عن سورة</label>
             <input
               id="searchInput"
               type="text"
@@ -78,54 +91,88 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label premium-label">اختر سورة</label>
+            <label class="form-label form-label-premium">اختر سورة</label>
             <select id="surahSelect" class="form-select premium-input"></select>
           </div>
 
           <div class="row g-3">
             <div class="col-6">
-              <label class="form-label premium-label">الجزء</label>
+              <label class="form-label form-label-premium">الجزء</label>
               <select id="juzSelect" class="form-select premium-input"></select>
             </div>
             <div class="col-6">
-              <label class="form-label premium-label">الحزب</label>
+              <label class="form-label form-label-premium">الحزب</label>
               <select id="hizbSelect" class="form-select premium-input"></select>
             </div>
           </div>
 
-          <div class="d-grid gap-2 mt-3">
-            <button id="loadSurahBtn" class="btn btn-gold">عرض السورة</button>
-            <button id="loadJuzBtn" class="btn btn-outline-gold">عرض الجزء</button>
-            <button id="loadHizbBtn" class="btn btn-outline-gold">عرض الحزب</button>
+          <div class="d-grid gap-2 mt-4">
+            <button id="loadSurahBtn" class="btn btn-gold" type="button">عرض السورة</button>
+            <button id="loadJuzBtn" class="btn btn-outline-gold" type="button">عرض الجزء</button>
+            <button id="loadHizbBtn" class="btn btn-outline-gold" type="button">عرض الحزب</button>
           </div>
         </div>
 
-        <div class="panel-box p-3 p-md-4">
-          <h3 class="panel-title">قائمة السور</h3>
+        <div class="panel-card mb-4">
+          <h3 class="panel-title">التلاوة الصوتية</h3>
+
+          <div class="mb-3">
+            <label class="form-label form-label-premium">اختر القارئ</label>
+            <select id="reciterSelect" class="form-select premium-input"></select>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button id="playSurahBtn" class="btn btn-gold" type="button">استماع إلى السورة</button>
+
+            <div class="row g-2">
+              <div class="col-4">
+                <button id="pauseAudioBtn" class="btn btn-outline-gold w-100" type="button">إيقاف</button>
+              </div>
+              <div class="col-4">
+                <button id="resumeAudioBtn" class="btn btn-outline-gold w-100" type="button">متابعة</button>
+              </div>
+              <div class="col-4">
+                <button id="stopAudioBtn" class="btn btn-outline-gold w-100" type="button">إنهاء</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="audio-box mt-3">
+            <audio id="quranPlayer" controls preload="none"></audio>
+            <div id="audioStatus" class="audio-status mt-2">لا يوجد تشغيل الآن</div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="panel-title mb-0">قائمة السور</h3>
+            <span class="mini-note">114 سورة</span>
+          </div>
+
           <div id="surahList" class="surah-list"></div>
         </div>
       </div>
 
-      <div class="col-lg-8">
-        <div class="panel-box p-3 p-md-4 reader-box">
-          <div class="reader-top">
+      <div class="col-xl-8 col-lg-7">
+        <div class="reader-card">
+          <div class="reader-header">
             <div>
-              <div class="reader-kicker" id="readerKicker">السورة الحالية</div>
-              <h2 class="reader-title" id="readerTitle">جاري التحميل...</h2>
-              <div class="reader-meta" id="readerMeta">...</div>
+              <div id="readerKicker" class="reader-kicker">السورة الحالية</div>
+              <h2 id="readerTitle" class="reader-title">جاري التحميل...</h2>
+              <div id="readerMeta" class="reader-meta">...</div>
             </div>
 
-            <div class="d-flex gap-2 flex-wrap">
-              <button id="fontPlusBtn" class="btn btn-sm btn-outline-gold">A+</button>
-              <button id="fontMinusBtn" class="btn btn-sm btn-outline-gold">A-</button>
+            <div class="reader-tools">
+              <button id="fontMinusBtn" class="btn btn-tool" type="button">A-</button>
+              <button id="fontPlusBtn" class="btn btn-tool" type="button">A+</button>
             </div>
           </div>
 
-          <div class="bismillah" id="bismillah">﷽</div>
+          <div id="bismillah" class="bismillah">﷽</div>
 
-          <div id="loadingBox" class="loading-box d-none">جاري التحميل...</div>
+          <div id="loadingBox" class="loading-box d-none">جاري تحميل النص القرآني...</div>
 
-          <div id="contentArea" class="quran-content"></div>
+          <div id="contentArea" class="quran-text"></div>
         </div>
       </div>
     </div>

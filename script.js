@@ -1,9 +1,15 @@
 const API_BASE = "https://api.alquran.cloud/v1";
+const MP3QURAN_API = "https://www.mp3quran.net/api/v3/reciters?language=ar";
 
 const searchInput = document.getElementById("searchInput");
 const surahSelect = document.getElementById("surahSelect");
 const juzSelect = document.getElementById("juzSelect");
 const hizbSelect = document.getElementById("hizbSelect");
+
+const loadSurahBtn = document.getElementById("loadSurahBtn");
+const loadJuzBtn = document.getElementById("loadJuzBtn");
+const loadHizbBtn = document.getElementById("loadHizbBtn");
+
 const surahList = document.getElementById("surahList");
 const readerTitle = document.getElementById("readerTitle");
 const readerMeta = document.getElementById("readerMeta");
@@ -11,40 +17,53 @@ const readerKicker = document.getElementById("readerKicker");
 const contentArea = document.getElementById("contentArea");
 const bismillah = document.getElementById("bismillah");
 const loadingBox = document.getElementById("loadingBox");
+
 const themeBtn = document.getElementById("themeBtn");
 const fontPlusBtn = document.getElementById("fontPlusBtn");
 const fontMinusBtn = document.getElementById("fontMinusBtn");
-const loadSurahBtn = document.getElementById("loadSurahBtn");
-const loadJuzBtn = document.getElementById("loadJuzBtn");
-const loadHizbBtn = document.getElementById("loadHizbBtn");
+
+const reciterSelect = document.getElementById("reciterSelect");
+const playSurahBtn = document.getElementById("playSurahBtn");
+const pauseAudioBtn = document.getElementById("pauseAudioBtn");
+const resumeAudioBtn = document.getElementById("resumeAudioBtn");
+const stopAudioBtn = document.getElementById("stopAudioBtn");
+const quranPlayer = document.getElementById("quranPlayer");
+const audioStatus = document.getElementById("audioStatus");
 
 let surahs = [];
-let currentFontSize = 2;
+let reciters = [];
+let currentFontSize = parseFloat(localStorage.getItem("quranFontSize")) || 2.2;
+let currentSurahName = "";
 
-function showLoading(show = true) {
-  loadingBox.classList.toggle("d-none", !show);
+function applyFontSize() {
+  contentArea.style.fontSize = `${currentFontSize}rem`;
+  localStorage.setItem("quranFontSize", currentFontSize.toString());
 }
 
-function normalizeArabic(text) {
+function showLoading(status) {
+  loadingBox.classList.toggle("d-none", !status);
+}
+
+function normalizeArabic(text = "") {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[أإآ]/g, "ا")
+    .replace(/[أإآٱ]/g, "ا")
     .replace(/ة/g, "ه")
     .replace(/ى/g, "ي")
     .replace(/ؤ/g, "و")
     .replace(/ئ/g, "ي")
-    .replace(/ٱ/g, "ا")
+    .replace(/ـ/g, "")
     .replace(/\s+/g, " ");
 }
 
 function cleanSearchQuery(query) {
   let q = normalizeArabic(query);
 
-  const removableTerms = [
+  const removableWords = [
     "سوره",
-    "السوره",
     "سورة",
+    "السوره",
     "السورة",
     "surah",
     "sura",
@@ -54,169 +73,207 @@ function cleanSearchQuery(query) {
     "sourah",
     "asoorat",
     "assorat",
-    "sorat al",
-    "surat",
-    "surat al",
     "chapter"
   ];
 
-  removableTerms.forEach(term => {
-    q = q.replaceAll(normalizeArabic(term), "");
+  removableWords.forEach(word => {
+    q = q.replaceAll(normalizeArabic(word), "");
   });
 
   return q.trim();
 }
 
 function saveTheme() {
-  const isLight = document.body.classList.contains("light-mode");
-  localStorage.setItem("quran-theme", isLight ? "light" : "dark");
+  const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
+  localStorage.setItem("quranTheme", mode);
 }
 
 function loadTheme() {
-  const saved = localStorage.getItem("quran-theme");
-  if (saved === "light") {
+  const mode = localStorage.getItem("quranTheme");
+  if (mode === "light") {
     document.body.classList.add("light-mode");
   }
 }
 
-function setReaderHeader(title, meta, kicker = "السورة الحالية") {
+function saveReciter() {
+  localStorage.setItem("quranReciterId", reciterSelect.value);
+}
+
+function loadSavedReciter() {
+  return localStorage.getItem("quranReciterId");
+}
+
+function setReaderHeader(kicker, title, meta) {
+  readerKicker.textContent = kicker;
   readerTitle.textContent = title;
   readerMeta.textContent = meta;
-  readerKicker.textContent = kicker;
 }
 
-function renderAyahs(ayahs) {
-  contentArea.innerHTML = ayahs
-    .map((ayah) => {
-      return `
-        <span class="ayah-inline">${ayah.text}</span>
-        <span class="ayah-number">${ayah.numberInSurah || ayah.number || ""}</span>
-      `;
-    })
-    .join(" ");
+function setBismillahVisible(status) {
+  bismillah.style.display = status ? "block" : "none";
 }
 
-function renderMixedAyahs(ayahs) {
+function renderAyahsInline(ayahs) {
   contentArea.innerHTML = ayahs
     .map((ayah, index) => {
-      const ayahNumber = ayah.numberInSurah || ayah.number || index + 1;
-      return `
-        <span class="ayah-inline">${ayah.text}</span>
-        <span class="ayah-number">${ayahNumber}</span>
-      `;
+      const number = ayah.numberInSurah || index + 1;
+      const text = ayah.text || "";
+      return `<span class="ayah">${text}</span><span class="ayah-number">${number}</span>`;
     })
     .join(" ");
 }
 
-function setBismillahVisibility(show) {
-  bismillah.style.display = show ? "block" : "none";
+function setActiveSurah(number) {
+  document.querySelectorAll(".surah-item").forEach(item => {
+    item.classList.toggle("active", item.dataset.number === String(number));
+  });
 }
 
-function buildSurahOption(surah) {
-  return `<option value="${surah.number}">${surah.number} - ${surah.name}</option>`;
+function renderSurahSelect(list) {
+  surahSelect.innerHTML = list
+    .map(surah => `<option value="${surah.number}">${surah.number} - ${surah.name}</option>`)
+    .join("");
 }
 
-function renderSurahSelect(data) {
-  surahSelect.innerHTML = data.map(buildSurahOption).join("");
-}
-
-function renderSurahList(data) {
-  surahList.innerHTML = data
-    .map((surah) => {
+function renderSurahList(list) {
+  surahList.innerHTML = list
+    .map(surah => {
       return `
-        <div class="surah-item" data-surah-number="${surah.number}">
+        <div class="surah-item" data-number="${surah.number}">
           <div class="surah-name">${surah.number}. ${surah.name}</div>
-          <div class="surah-meta">
-            ${surah.englishName} • ${surah.numberOfAyahs} آيات
-          </div>
+          <div class="surah-meta">${surah.englishName} • ${surah.numberOfAyahs} آيات</div>
         </div>
       `;
     })
     .join("");
 
-  document.querySelectorAll(".surah-item").forEach((item) => {
+  document.querySelectorAll(".surah-item").forEach(item => {
     item.addEventListener("click", () => {
-      const number = item.getAttribute("data-surah-number");
+      const number = item.dataset.number;
       surahSelect.value = number;
       loadSurah(number);
-      setActiveSurahItem(number);
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
 }
 
-function setActiveSurahItem(number) {
-  document.querySelectorAll(".surah-item").forEach((item) => {
-    item.classList.toggle(
-      "active",
-      item.getAttribute("data-surah-number") === String(number)
-    );
-  });
-}
-
-function initJuzSelect() {
-  let options = "";
+function initJuz() {
+  let html = "";
   for (let i = 1; i <= 30; i++) {
-    options += `<option value="${i}">الجزء ${i}</option>`;
+    html += `<option value="${i}">الجزء ${i}</option>`;
   }
-  juzSelect.innerHTML = options;
+  juzSelect.innerHTML = html;
 }
 
-function initHizbSelect() {
-  let options = "";
+function initHizb() {
+  let html = "";
   for (let i = 1; i <= 60; i++) {
-    options += `<option value="${i}">الحزب ${i}</option>`;
+    html += `<option value="${i}">الحزب ${i}</option>`;
   }
-  hizbSelect.innerHTML = options;
+  hizbSelect.innerHTML = html;
 }
 
-async function fetchJSON(url) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error("تعذر تحميل البيانات");
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("API error");
   }
-  return await res.json();
+  return response.json();
 }
 
 async function loadSurahList() {
   try {
     showLoading(true);
-    const data = await fetchJSON(`${API_BASE}/surah`);
+    const data = await fetchJson(`${API_BASE}/surah`);
     surahs = data.data || [];
     renderSurahSelect(surahs);
     renderSurahList(surahs);
     surahSelect.value = "1";
   } catch (error) {
-    setReaderHeader("خطأ", "تعذر تحميل قائمة السور", "تنبيه");
+    setReaderHeader("تنبيه", "تعذر تحميل البيانات", "تحقق من الاتصال بالإنترنت");
     contentArea.innerHTML = "حدث خطأ أثناء تحميل قائمة السور.";
   } finally {
     showLoading(false);
   }
 }
 
+async function loadReciters() {
+  try {
+    const data = await fetchJson(MP3QURAN_API);
+
+    const wantedNames = [
+      "العفاسي",
+      "السديس",
+      "الشريم",
+      "المعيقلي"
+    ];
+
+    const allReciters = data.reciters || [];
+
+    const filtered = allReciters.filter(reciter => {
+      const name = reciter.name || "";
+      return wantedNames.some(keyword => name.includes(keyword));
+    });
+
+    reciters = filtered
+      .map(reciter => {
+        const usableMoshaf = (reciter.moshaf || []).find(
+          m => m.server && m.surah_list && Number(m.surah_total) > 0
+        );
+
+        if (!usableMoshaf) return null;
+
+        return {
+          id: String(reciter.id),
+          name: reciter.name,
+          server: usableMoshaf.server,
+          surahList: String(usableMoshaf.surah_list)
+            .split(",")
+            .map(v => Number(v.trim()))
+            .filter(Boolean)
+        };
+      })
+      .filter(Boolean);
+
+    reciterSelect.innerHTML = reciters
+      .map(reciter => `<option value="${reciter.id}">${reciter.name}</option>`)
+      .join("");
+
+    const savedId = loadSavedReciter();
+    const exists = reciters.some(r => r.id === savedId);
+
+    if (savedId && exists) {
+      reciterSelect.value = savedId;
+    } else if (reciters.length) {
+      reciterSelect.value = reciters[0].id;
+    }
+  } catch (error) {
+    reciterSelect.innerHTML = `<option value="">تعذر تحميل القراء</option>`;
+    audioStatus.textContent = "تعذر تحميل قائمة القراء";
+  }
+}
+
 async function loadSurah(number = 1) {
   try {
     showLoading(true);
-    setBismillahVisibility(true);
+    const result = await fetchJson(`${API_BASE}/surah/${number}/quran-uthmani`);
+    const surah = result.data;
 
-    const res = await fetchJSON(`${API_BASE}/surah/${number}/quran-uthmani`);
-    const surah = res.data;
+    currentSurahName = surah.name;
 
     setReaderHeader(
+      "السورة الحالية",
       surah.name,
-      `${surah.englishName} • ${surah.numberOfAyahs} آيات`,
-      "السورة الحالية"
+      `${surah.englishName} • ${surah.numberOfAyahs} آيات`
     );
 
-    if (Number(number) === 9) {
-      setBismillahVisibility(false);
-    }
-
-    renderAyahs(surah.ayahs);
-    setActiveSurahItem(number);
+    setBismillahVisible(Number(number) !== 9);
+    renderAyahsInline(surah.ayahs);
+    applyFontSize();
+    setActiveSurah(number);
   } catch (error) {
-    setReaderHeader("خطأ", "تعذر تحميل السورة", "تنبيه");
-    setBismillahVisibility(false);
+    setReaderHeader("تنبيه", "تعذر تحميل السورة", "حاول مرة أخرى");
+    setBismillahVisible(false);
     contentArea.innerHTML = "حدث خطأ أثناء تحميل السورة.";
   } finally {
     showLoading(false);
@@ -226,20 +283,24 @@ async function loadSurah(number = 1) {
 async function loadJuz(juzNumber = 1) {
   try {
     showLoading(true);
-    setBismillahVisibility(false);
+    const result = await fetchJson(`${API_BASE}/juz/${juzNumber}/quran-uthmani`);
+    const juz = result.data;
 
-    const res = await fetchJSON(`${API_BASE}/juz/${juzNumber}/quran-uthmani`);
-    const juz = res.data;
+    currentSurahName = `الجزء ${juz.number}`;
 
     setReaderHeader(
+      "عرض حسب الجزء",
       `الجزء ${juz.number}`,
-      `${juz.ayahs.length} آية`,
-      "عرض حسب الجزء"
+      `${juz.ayahs.length} آية`
     );
 
-    renderMixedAyahs(juz.ayahs);
+    setBismillahVisible(false);
+    renderAyahsInline(juz.ayahs);
+    applyFontSize();
+    setActiveSurah("");
   } catch (error) {
-    setReaderHeader("خطأ", "تعذر تحميل الجزء", "تنبيه");
+    setReaderHeader("تنبيه", "تعذر تحميل الجزء", "حاول مرة أخرى");
+    setBismillahVisible(false);
     contentArea.innerHTML = "حدث خطأ أثناء تحميل الجزء.";
   } finally {
     showLoading(false);
@@ -249,28 +310,26 @@ async function loadJuz(juzNumber = 1) {
 async function loadHizb(hizbNumber = 1) {
   try {
     showLoading(true);
-    setBismillahVisibility(false);
 
-    // AlQuran Cloud يوفر hizbQuarter من 1 إلى 240
-    // بما أن المستخدم يريد 60 حزب، نحول كل حزب إلى أول ربع منه تقريباً:
-    // الحزب 1 => الربع 1
-    // الحزب 2 => الربع 5
-    // الحزب 3 => الربع 9
-    // وهكذا
     const hizbQuarter = ((Number(hizbNumber) - 1) * 4) + 1;
+    const result = await fetchJson(`${API_BASE}/hizbQuarter/${hizbQuarter}/quran-uthmani`);
+    const hizb = result.data;
 
-    const res = await fetchJSON(`${API_BASE}/hizbQuarter/${hizbQuarter}/quran-uthmani`);
-    const block = res.data;
+    currentSurahName = `الحزب ${hizbNumber}`;
 
     setReaderHeader(
+      "عرض حسب الحزب",
       `الحزب ${hizbNumber}`,
-      `بداية الحزب ${hizbNumber} • عرض نصي قرآني`,
-      "عرض حسب الحزب"
+      `${hizb.ayahs.length} آية من بداية الحزب`
     );
 
-    renderMixedAyahs(block.ayahs);
+    setBismillahVisible(false);
+    renderAyahsInline(hizb.ayahs);
+    applyFontSize();
+    setActiveSurah("");
   } catch (error) {
-    setReaderHeader("خطأ", "تعذر تحميل الحزب", "تنبيه");
+    setReaderHeader("تنبيه", "تعذر تحميل الحزب", "حاول مرة أخرى");
+    setBismillahVisible(false);
     contentArea.innerHTML = "حدث خطأ أثناء تحميل الحزب.";
   } finally {
     showLoading(false);
@@ -286,15 +345,14 @@ function handleSearch() {
     return;
   }
 
-  const filtered = surahs.filter((surah) => {
-    const arabicName = normalizeArabic(surah.name);
-    const englishName = normalizeArabic(surah.englishName || "");
-    const englishTranslation = normalizeArabic(surah.englishNameTranslation || "");
-
+  const filtered = surahs.filter(surah => {
+    const ar = normalizeArabic(surah.name);
+    const en = normalizeArabic(surah.englishName || "");
+    const tr = normalizeArabic(surah.englishNameTranslation || "");
     return (
-      arabicName.includes(cleaned) ||
-      englishName.includes(cleaned) ||
-      englishTranslation.includes(cleaned) ||
+      ar.includes(cleaned) ||
+      en.includes(cleaned) ||
+      tr.includes(cleaned) ||
       String(surah.number) === cleaned
     );
   });
@@ -306,46 +364,126 @@ function handleSearch() {
   }
 }
 
+function stopAudio() {
+  quranPlayer.pause();
+  quranPlayer.currentTime = 0;
+  quranPlayer.removeAttribute("src");
+  quranPlayer.load();
+}
+
+async function playSurahAudio(surahNumber) {
+  try {
+    const selectedReciter = reciters.find(r => r.id === reciterSelect.value);
+
+    if (!selectedReciter) {
+      throw new Error("No reciter selected");
+    }
+
+    if (!selectedReciter.surahList.includes(Number(surahNumber))) {
+      throw new Error("This reciter does not have this surah");
+    }
+
+    const paddedSurah = String(surahNumber).padStart(3, "0");
+    const server = selectedReciter.server.endsWith("/")
+      ? selectedReciter.server
+      : `${selectedReciter.server}/`;
+
+    const audioUrl = `${server}${paddedSurah}.mp3`;
+
+    quranPlayer.src = audioUrl;
+    quranPlayer.load();
+    await quranPlayer.play();
+
+    audioStatus.textContent = `يتم الآن تشغيل السورة كاملة بصوت ${selectedReciter.name}`;
+  } catch (error) {
+    console.error(error);
+    audioStatus.textContent = "تعذر تشغيل السورة لهذا القارئ";
+  }
+}
+
+quranPlayer.addEventListener("play", () => {
+  if (currentSurahName) {
+    const selectedReciter = reciters.find(r => r.id === reciterSelect.value);
+    if (selectedReciter) {
+      audioStatus.textContent = `يتم الآن تشغيل ${currentSurahName} بصوت ${selectedReciter.name}`;
+    }
+  }
+});
+
+quranPlayer.addEventListener("pause", () => {
+  if (quranPlayer.currentTime > 0 && !quranPlayer.ended) {
+    audioStatus.textContent = "تم إيقاف التلاوة مؤقتًا";
+  }
+});
+
+quranPlayer.addEventListener("ended", () => {
+  audioStatus.textContent = `انتهت تلاوة ${currentSurahName}`;
+});
+
 themeBtn.addEventListener("click", () => {
   document.body.classList.toggle("light-mode");
   saveTheme();
 });
 
 fontPlusBtn.addEventListener("click", () => {
-  currentFontSize += 0.15;
-  document.documentElement.style.setProperty("--ayah-size", `${currentFontSize}rem`);
+  currentFontSize = Math.min(currentFontSize + 0.15, 4);
+  applyFontSize();
 });
 
 fontMinusBtn.addEventListener("click", () => {
-  currentFontSize = Math.max(1.2, currentFontSize - 0.15);
-  document.documentElement.style.setProperty("--ayah-size", `${currentFontSize}rem`);
+  currentFontSize = Math.max(currentFontSize - 0.15, 1.4);
+  applyFontSize();
 });
 
 searchInput.addEventListener("input", handleSearch);
 
 loadSurahBtn.addEventListener("click", () => {
-  const selected = surahSelect.value || 1;
-  loadSurah(selected);
+  loadSurah(surahSelect.value || 1);
 });
 
 loadJuzBtn.addEventListener("click", () => {
-  const selected = juzSelect.value || 1;
-  loadJuz(selected);
+  loadJuz(juzSelect.value || 1);
 });
 
 loadHizbBtn.addEventListener("click", () => {
-  const selected = hizbSelect.value || 1;
-  loadHizb(selected);
+  loadHizb(hizbSelect.value || 1);
 });
 
 surahSelect.addEventListener("change", () => {
   loadSurah(surahSelect.value);
 });
 
+reciterSelect.addEventListener("change", saveReciter);
+
+playSurahBtn.addEventListener("click", () => {
+  const surahNumber = surahSelect.value || 1;
+  playSurahAudio(surahNumber);
+});
+
+pauseAudioBtn.addEventListener("click", () => {
+  quranPlayer.pause();
+  audioStatus.textContent = "تم إيقاف التلاوة مؤقتًا";
+});
+
+resumeAudioBtn.addEventListener("click", async () => {
+  try {
+    await quranPlayer.play();
+  } catch (error) {
+    audioStatus.textContent = "تعذر متابعة التشغيل";
+  }
+});
+
+stopAudioBtn.addEventListener("click", () => {
+  stopAudio();
+  audioStatus.textContent = "تم إنهاء التلاوة";
+});
+
 window.addEventListener("DOMContentLoaded", async () => {
   loadTheme();
-  initJuzSelect();
-  initHizbSelect();
+  initJuz();
+  initHizb();
+  applyFontSize();
   await loadSurahList();
+  await loadReciters();
   await loadSurah(1);
 });
